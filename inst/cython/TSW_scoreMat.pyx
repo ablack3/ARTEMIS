@@ -148,7 +148,7 @@ cdef TSW_scoreMat(
                 TC[i][j] = TC[i - 1][j]
             # VERTICAL
             elif traceVal == 3:
-                TR[i][j] = TC[i][j - 1]
+                TR[i][j] = TR[i][j - 1]
                 TC[i][j] = TC[i][j - 1] + s1_time_j
 
             # Edge penalty
