@@ -145,7 +145,7 @@ def TSW_scoreMat(s1, s1_len, s2, s2_len, g, T, H, TR, TC, traceMat, s, method):
 
             # VERTICAL
             elif traceVal == 3:
-                TR[i][j] = TC[i][j - 1]
+                TR[i][j] = TR[i][j - 1]
                 TC[i][j] = TC[i][j - 1] + float(s1[j - 1][0])
 
             if j == s1_len and i < s2_len:
