@@ -18,6 +18,6 @@
 
 #' A default cohort indicating metastatic lung cancer patients
 #'
-#' A default cohort json
+#' A default cohort data.frame with json
 #' @format A data frame with 1 rows and 4 variables:
-"json"
+"df_json"

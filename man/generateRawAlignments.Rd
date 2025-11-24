@@ -9,7 +9,7 @@ generateRawAlignments(
   regimens,
   g,
   Tfac,
-  s = NA,
+  s = NULL,
   verbose = 0,
   mem = -1,
   removeOverlap = -1,
