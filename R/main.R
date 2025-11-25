@@ -214,7 +214,7 @@ calculateEras <- function(processedAll, discontinuationTime = 120) {
             )
         
         tempDF[1, ]$delete <- "N"
-        tempDF1 <- tempDF %>%
+        tempDF <- tempDF %>%
             dplyr::mutate(newLine = cumsum(delete == "N")) %>%
             dplyr::summarise(
                 adjustedS = sum(adjustedS * (t_end - t_start) / sum(t_end - t_start)),
