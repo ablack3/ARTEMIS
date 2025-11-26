@@ -128,25 +128,26 @@ removeOverlaps <- function(df) {
     # Final overlap removal - sub-regimens
     # Ensure sorted order for foverlaps
     
-    data.table::setorder(df, t_start, t_end)
-    df_overlap <- data.table::copy(df)
-    data.table::setkey(df_overlap, t_start, t_end)
+    # data.table::setorder(df, t_start, t_end)
+    # df_overlap <- data.table::copy(df)
+    # data.table::setkey(df_overlap, t_start, t_end)
     
-    # Find overlapping intervals
-    overlaps <- data.table::foverlaps(df, df_overlap, nomatch = 0, 
-                          by.x = c("t_start", "t_end"), 
-                          by.y = c("t_start", "t_end"))
+    # # Find overlapping intervals
+    # overlaps <- data.table::foverlaps(df, df_overlap, nomatch = 0, 
+    #                       by.x = c("t_start", "t_end"), 
+    #                       by.y = c("t_start", "t_end"))
     
-    # Exclude self-overlaps and one position overlaps
-    overlaps <- overlaps[index < i.index,]
-    overlaps <- overlaps[t_start != i.t_end & t_end != i.t_start,]
+    # # Exclude self-overlaps and one position overlaps
+    # overlaps <- overlaps[index < i.index,]
+    # overlaps <- overlaps[t_start != i.t_end & t_end != i.t_start,]
     
-    overlaps <- overlaps[regName == i.regName & totAlign == i.totAlign,]
-    overlaps <- overlaps[adjustedS != i.adjustedS,]
-    toRemove <- overlaps[,.(remove = ifelse(adjustedS < i.adjustedS, index, i.index))]$remove
+    # overlaps <- overlaps[regName == i.regName & totAlign == i.totAlign,]
+    # overlaps <- overlaps[adjustedS != i.adjustedS,]
+    # toRemove <- overlaps[,.(remove = ifelse(adjustedS < i.adjustedS, index, i.index))]$remove
+    # toRemove = c()
+    # df <- df[!index %in% toRemove][order(t_start)]
+    # df[, index := NULL]
     
-    df <- df[!index %in% toRemove][order(t_start)]
-    df[, index := NULL]
     df <- as.data.frame(df)
     return(df)
 }

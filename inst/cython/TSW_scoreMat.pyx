@@ -20,9 +20,9 @@ cdef inline double lossFunction(double T, double t1, double t2, str method, int 
 
     if method == "PropDiff":
         if t1 == 0.0 or t2 == 0.0:
-            tp = T * absDiff / (maxT + 1)
+            tp = T * absDiff / (maxT + 1) if absDiff < 100 else T * absDiff
         else:
-            tp = T * absDiff / maxT
+            tp = T * absDiff / maxT if absDiff < 100 else T * absDiff
     elif method == "AbsDiff":
         tp = T * absDiff
     elif method == "Quadratic":

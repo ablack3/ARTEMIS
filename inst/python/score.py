@@ -17,10 +17,10 @@ def lossFunction(T, t1, t2, method, i, j):
 
     elif method == "PropDiff":
         if t1 == 0 or t2 == 0:
-            return T * ((absDiff) / (maxT + 1))
+            return T * ((absDiff) / (maxT + 1)) if absDiff < 100 else T * absDiff
 
         else:
-            return T * ((absDiff) / (maxT))
+            return T * ((absDiff) / (maxT)) if absDiff < 100 else T * absDiff
 
     elif method == "AbsDiff":
         return T * absDiff
