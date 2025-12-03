@@ -24,8 +24,60 @@ to form the basic regimen data used in testing.
 
 ARTEMIS can presently be installed directly from GitHub:
 
-    # install.packages("devtools")
-    devtools::install_github("OHDSI/ARTEMIS")
+```r
+devtools::install_github("OHDSI/ARTEMIS")
+```
+
+## Dependencies
+Before installing ARTEMIS, you need a working Python (>= 3.12) available and on your system PATH.
+
+To check the Python version from within R:
+
+```r
+system("python --version", intern = TRUE)
+```
+
+For convenience, set the `ARTEMIS_PYTHON` system variable to the correct Python path. If unsure how to do this, refer to the OS-specific setup instructions below. Make sure you have devtools installed. You can install it from within R:
+
+```r
+install.packages("devtools")
+```
+
+To use ARTEMIS efficiently with the optimized alignment version, check the OS-specific dependencies:
+
+### If using Windows
+Install Python 3.12 or above from the Microsoft Store or from:
+https://www.python.org/downloads/windows/
+
+Then open cmd or PowerShell and set the environment variable:
+
+    set ARTEMIS_PYTHON=<ABS\\PATH\\TO\\python.exe (v3.12+)>
+
+Other requirements checklist:
+
+* R, Rtools, and devtools installed
+
+* Microsoft Visual C++ 14.0 or greater (required by Python packages like numpy)
+
+* Visual Studio Build Tools (for faster Cython-compiled alignment)
+
+### If using Linux or macOS
+
+Install Python 3.12+ using your preferred package manager (e.g., Homebrew, apt, pacman) or download it from: https://www.python.org/
+
+Then from the terminal, set the Python version environment variable:
+
+    export ARTEMIS_PYTHON="/absolute/path/to/python3.12"
+
+Other dependencies you might need installed:
+
+    base-devel, r, git, libgit2, zlib, libxml2, openssl, curl, pkgconf, 
+    pandoc, glpk, gmp, libtool, graphviz, make, cmake, tzdata, 
+    jdk-openjdk, libcurl-compat, gcc-fortran, openblas, lapack
+
+### Reticulate
+
+💡 You do NOT need to manually set up reticulate — ARTEMIS takes care of it automatically during setup. This section is for informational purposes only.
 
 ARTEMIS relies on a python back-end via
 [reticulate](https://rstudio.github.io/reticulate/) and depending on
