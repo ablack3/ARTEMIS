@@ -2,7 +2,12 @@
   
   # ----------- EVN SETUP BLOCK -----------
   # Resolve paths from ENV or use fallback
-  ARTEMIS_PYTHON <- Sys.getenv("ARTEMIS_PYTHON", unset = Sys.which("python"))
+  ARTEMIS_PYTHON <- system.file(".r-reticulate/bin/python", package = pkgname)
+  
+  if (!file.exists(ARTEMIS_PYTHON)) {
+    ARTEMIS_PYTHON <- Sys.getenv("ARTEMIS_PYTHON", unset = Sys.which("python"))
+  }
+
   DEBUG <- tolower(Sys.getenv("ARTEMIS_DEBUG", unset = "false")) == "true"
 
   message("[ARTEMIS-boot-R] Setup env...")
