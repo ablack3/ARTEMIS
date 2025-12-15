@@ -195,7 +195,7 @@ relevant patient details for constructing regimen strings.
 Regimen strings are then constructed, collated and filtered into a
 stringDF dataframe containing all patients of interest.
 
-    stringDF <- stringDF_from_cdm(con_df = con_df, writeOut = F, validDrugs = validdrugs)
+    stringDF <- stringDF_from_cdm(con_df = con_df, validDrugs = validdrugs)
 
 The TSW algorithm is then run using user input settings and the provided
 regimen and patient data. Detailed information on user inputs, such as
