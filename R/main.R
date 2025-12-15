@@ -88,8 +88,6 @@ generateRawAlignments <- function(stringDF,
 }
 
 
-
-
 #' Perform post-processing on a data frame of raw alignment results
 #' @param rawOutput An output dataframe produced by generateRawAlignments()
 #' @param regimenCombine The numeric value of days allowed between regimens of the same
@@ -115,10 +113,8 @@ processAlignments <- function(rawOutput,
     IDs_All <- unique(rawOutput$personID)    
     cli::cat_bullet(
         paste(
-            "Performing post-processing of ",
-            length(IDs_All),
-            " patients.\n Total alignments: ",
-            dim(rawOutput)[1],
+            "Performing post-processing of ", length(IDs_All),
+            " patients.\n Total alignments: ", dim(rawOutput)[1],
             sep = ""
         ),
         bullet_col = "yellow",
@@ -215,22 +211,20 @@ calculateEras <- function(processedAll, discontinuationTime = 120) {
         tempDF <- tempDF %>%
             dplyr::mutate(newLine = cumsum(delete == "N")) %>%
             dplyr::summarise(
-                adjustedS = sum(adjustedS * (t_end - t_start) / sum(t_end - t_start)),
+                adjustedS = sum(adjustedS * (t_end - t_start) / max(sum(t_end - t_start), 1)), # avoid division by zero
                 t_start = min(t_start),
                 t_end = max(t_end),
                 timToEod = min(timeToEOD),
-                .by = c(component, newLine, personID)
+                .by = c(component, newLine, personID, DrugRecord_full)
             ) %>%
             dplyr::mutate(
                 regLength = t_end - t_start,
-                timeToNextRegimen = lag(t_start, 1) - t_end,
+                timeToNextRegimen = max(lag(t_start, 1) - t_end, 0),
                 First_Line = 1 * (row_number() == 1),
                 Second_Line = 1 * (row_number() == 2),
                 Other = 1 * (row_number() > 2)
             )
-        
-        tempDF$timeToNextRegimen[tempDF$timeToNextRegimen < 0] <- 0
-        
+                
         result_list[[i]] <- tempDF
         
     }
@@ -316,7 +310,8 @@ generateRegimenStats <- function(processedEras) {
     return(aggregated_Processed_Data)
 }
 
-#' A function to conveniently generate several stats relating to the input cohort
+
+#' Generate several stats related to the input cohort
 #' @param connectionDetails A set of DatabaseConnector connectiondetails
 #' @param cdmSchema A schema containing a valid OMOP CDM
 #' @param stringDF A stringDF object containing all valid patients (i.e., those who have exposure

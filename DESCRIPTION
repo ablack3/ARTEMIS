@@ -10,8 +10,11 @@ Imports:
     reticulate (>= 1.27-9000),
     DatabaseConnector,
     dplyr,
+    tidyr,
+    forcats,
     data.table,
     ggplot2,
+    ggtext,
     lubridate,
     cli,
     magrittr,
@@ -26,7 +29,8 @@ Imports:
     reshape2,
     ggsci,
     gridExtra,
-    methods
+    methods,
+    RColorBrewer
 License: Apache License (>= 2)
 VignetteBuilder: knitr
 Encoding: UTF-8
