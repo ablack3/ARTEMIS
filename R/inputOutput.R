@@ -11,7 +11,7 @@ getConDF <- function(connectionDetails, json, name, cdmSchema, writeSchema){
   connection <- DatabaseConnector::connect(connectionDetails = connectionDetails)
 
   cohortsToCreate <- CohortGenerator::createEmptyCohortDefinitionSet()
-  cohortExpression <- CirceR::cohortExpressionFromJson(json$json[[1]])
+  cohortExpression <- CirceR::cohortExpressionFromJson(json)
   cohortSql <- CirceR::buildCohortQuery(cohortExpression, options = CirceR::createGenerateOptions(generateStats = FALSE))
   cohortsToCreate <- rbind(cohortsToCreate, data.frame(cohortId = 1,
                                                        cohortName = name,
@@ -30,48 +30,43 @@ getConDF <- function(connectionDetails, json, name, cdmSchema, writeSchema){
                                                          cohortTableNames = cohortTableNames,
                                                          cohortDefinitionSet = cohortsToCreate)
 
-  subject_ids <- DatabaseConnector::dbGetQuery(conn = connection,
-                                               statement = paste("SELECT subject_id FROM ",writeSchema,".",name,sep=""))
-  
-  if(nrow(subject_ids) == 0) stop("The target cohort has no subjects")
-
   sql_template <- "
 WITH filtered_drug_exposure AS (
-  SELECT drug_exposure.person_id,
+  SELECT CAST(drug_exposure.person_id AS VARCHAR) AS person_id,
          drug_exposure.drug_exposure_start_date,
          drug_exposure.drug_concept_id,
          concept_ancestor.ancestor_concept_id,
          concept.concept_name
   FROM @cdmSchema.drug_exposure
+  JOIN @cohortDatabaseSchema.@name ch on ch.subject_id = drug_exposure.person_id
   LEFT JOIN @cdmSchema.concept_ancestor ON drug_exposure.drug_concept_id = concept_ancestor.descendant_concept_id
   LEFT JOIN @cdmSchema.concept ON concept_ancestor.ancestor_concept_id = concept.concept_id
-  WHERE drug_exposure.person_id IN @subject_ids
-    AND LOWER(concept.concept_class_id) = 'ingredient'
+  WHERE LOWER(concept.concept_class_id) = 'ingredient'
 )
 SELECT * FROM filtered_drug_exposure;
 "
 
-rendered_sql <- SqlRender::render(sql_template, subject_ids = gsub("c","",paste(subject_ids)), cdmSchema = cdmSchema)
+  rendered_sql <- SqlRender::render(sql_template, cdmSchema = cdmSchema, cohortDatabaseSchema = writeSchema, name = name)
+  rendered_sql <- SqlRender::translate(rendered_sql, targetDialect = connection@dbms)
 
-con_df <- DatabaseConnector::dbGetQuery(conn = connection,
+  con_df <- DatabaseConnector::dbGetQuery(conn = connection,
                                         statement = rendered_sql)
 
-con_df <- as.data.frame(con_df)
+  con_df <- as.data.frame(con_df)
 
-return(con_df)
+  message(paste(nrow(con_df), " subjects with a drug exposure found"))
+
+  return(con_df)
 
 }
 
 #' Generate a set of patient drug record strings from a valid CDM connection and
 #' a valid cohort JSON.
 #' @param con_df A con_df dataframe returned by getCohortSet()
-#' @param writeOut A variable indicating whether to save the set of drug records
-#' @param outputName The name for a given written output
-#' as a local file
 #' @param validDrugs A dataframe containing a set of validDrugs
 #' @return A dataframe containing the relevant patients and their drug exposure strings
 #' @export
-stringDF_from_cdm <- function(con_df, writeOut=TRUE, outputName = "Output", validDrugs) {
+stringDF_from_cdm <- function(con_df, validDrugs) {
 
   cli::cat_bullet("Filtering dataframe to valid drugs only...",
                   bullet_col = "yellow", bullet = "info")
@@ -101,11 +96,6 @@ stringDF_from_cdm <- function(con_df, writeOut=TRUE, outputName = "Output", vali
 
   con_df_out2$seq <- gsub(" ","",gsub(",","_",con_df_out2$seq))
 
-  if(writeOut == TRUE){
-    outputFile <- here::here()
-    write.csv(file = paste(outputFile,"/",outputName,".csv",sep=""), x = con_df_out2, append = FALSE)
-  }
-
   cli::cat_bullet("Complete!",
                   bullet_col = "green", bullet = "tick")
 
@@ -120,7 +110,7 @@ stringDF_from_cdm <- function(con_df, writeOut=TRUE, outputName = "Output", vali
 #' @return A filtered dataframe containing the relevant patients and their
 #' drug exposure strings
 #' @export
-filter_stringDF <- function(stringDF,min) {
+filter_stringDF <- function(stringDF, min) {
 
   stringDF <- stringDF %>%
     dplyr::mutate(Count = stringr::str_count(seq, ";") + 1)
@@ -134,7 +124,7 @@ filter_stringDF <- function(stringDF,min) {
 #' Load the default valid drugs dataframe
 #' @param absolute Optional. Absolute path to a custom `.rda` file containing the `validdrugs` dataset. If not provided, the function loads from the `ARTEMIS` package.
 #' @export
-loadDrugs <- function(absolute=NULL) {
+loadDrugs <- function(absolute = NULL) {
    if (!is.null(absolute)) {
     if (!file.exists(absolute)) {
       stop(paste("Error: The specified file", absolute, "was not found."))
@@ -167,7 +157,7 @@ loadDrugs <- function(absolute=NULL) {
 #' Edit: all conditions supported matching a name OR providing a mapping, see example
 #' @param mapping A named list of user provids condition to maping
 #' @export
-loadRegimens <- function(condition, absolute = NULL, 
+loadRegimens <- function(condition = "all", absolute = NULL, 
                          mapping = list("lungCancer" = c("Thoraic Oncology", "Thoraic Oncology"),
                                         "multipleMyeloma" = c("Multiple Myeloma"))) {
   
@@ -247,8 +237,7 @@ loadGroups <- function(absolute=NULL) {
 #' Load the default regimen group dataframe
 #' @export
 loadCohort <- function() {
-  #data("json", package = "ARTEMIS")
-  return(ARTEMIS::json)
+  return(ARTEMIS::df_json)
 }
 
 #' Filter a stringDF dataframe to contain only valid patients

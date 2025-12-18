@@ -12,11 +12,12 @@ import sys, os
 #current_file = os.path.abspath(__file__)
 #current_dir = os.path.dirname(current_file)
 
-# Build absolute path to ../cython/TSW_Package (or compiled .so)
-#cython_dir = os.path.abspath(current_dir)  # normalize path
+# Build absolute path to e.g. "../cython/TSW_Package" (or compiled .so)
+# Using ENV var to load dependencies safe;ly
+cdef str tsw_path = os.environ.get("TSW_PACKAGE_PATH", "")
+sys.path.append(tsw_path)
 
 # Add to Python path so you can import
-#sys.path.append(cython_dir)
 from init_TSW cimport init_Hmat, init_TCmat, init_TRmat, init_traceMat
 from TSW_scoreMat cimport TSW_scoreMat as TSWc
 from find_best_score cimport find_best_score as fbs
@@ -71,7 +72,6 @@ cpdef object temporal_alignment(
     object s,
     bint verbose,
     int mem=-1,
-    int removeOverlap=0,
     object method="PropDiff"
 ):
     """
@@ -79,12 +79,12 @@ cpdef object temporal_alignment(
 
     Parameters
     ----------
-    s1, s2 : list of [time, drug] pairs
-    g, T   : float penalties
-    s      : similarity matrix (or None)
+    s1, s2  : list of [time, drug] pairs
+    g, T    : float penalties
+    s       : similarity matrix (or None)
     verbose : bool
-    mem, removeOverlap : optional alignment controls
-    method : str
+    mem     : optional alignment controls
+    method  : str
     """
     cdef int s1_len = len(s1)
     cdef int s2_len = len(s2)
@@ -192,7 +192,6 @@ def align_patients_regimens_fast(
     s=None,
     int verbose=0,
     int mem=-1,
-    int removeOverlap=1,
     str method="PropDiff",
 ):
     """
@@ -237,7 +236,6 @@ def align_patients_regimens_fast(
                     s=s,
                     verbose=verbose,
                     mem=mem,
-                    removeOverlap=removeOverlap,
                     method=method,
                 )
 

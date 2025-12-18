@@ -2,16 +2,7 @@ import numpy as np
 import pandas as pd
 import math as math
 
-# --- ADD TSW_Package to sys.path
 import sys, os
-
-# Full path to the current script
-# current_file = os.path.abspath(__file__)
-# current_dir = os.path.dirname(current_file)
-# Build absolute path to ../cython/TSW_Package (or compiled .so)
-# cython_dir = os.path.abspath(current_dir)  # normalize path
-# Add to Python path so you can import
-# sys.path.append(cython_dir)
 from TSW_Package import align_patients_regimens_fast
 
 
@@ -30,7 +21,6 @@ def align_patients_regimens(
     s=None,
     verbose=0,
     mem=-1,
-    removeOverlap=1,
     method="PropDiff",
 ):
     return align_patients_regimens_fast(
@@ -45,7 +35,6 @@ def align_patients_regimens(
         s=s,
         verbose=verbose,
         mem=mem,
-        removeOverlap=removeOverlap,
         method=method,
     )
 

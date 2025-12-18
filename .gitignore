@@ -3,6 +3,7 @@
 .RData
 .Ruserdata
 .DS_Store
+.r-reticulate
 errorReportSql.txt
 CDM_test_long.R
 TestTest.R
@@ -23,9 +24,11 @@ main_test.py
 *.pyc
 .tmp
 __pycache__
+.Ruserdata*
+.venv*
 /inst/cython/TSW_Package
 /inst/cython/build
-
 *.so
 *.o
 *.c
+.vscode/settings.json

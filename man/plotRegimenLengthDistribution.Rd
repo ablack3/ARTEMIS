@@ -2,20 +2,19 @@
 % Please edit documentation in R/plots.R
 \name{plotRegimenLengthDistribution}
 \alias{plotRegimenLengthDistribution}
-\title{Plots a plot displaying the observed regimen length distribution for a given regimen, or two given regimens
-processed output}
+\title{Plot Regimen Length Distribution}
 \usage{
-plotRegimenLengthDistribution(regimen1, regimen2 = NA, processedAll)
+plotRegimenLengthDistribution(pa, components = NULL, top_n = 6)
 }
 \arguments{
-\item{regimen1}{A regimen of interest}
+\item{pa}{Patients alignments dataframe created by processAlignments}
 
-\item{regimen2}{An optional regimen of interest for comparison}
+\item{components}{A set of regimens of interest}
 
-\item{processedAll}{An output dataframe created by processAlignments}
+\item{top_n}{Top n most frequent regimens to plot. Ignored if components provided. Default is 6}
 }
 \value{
-regPlot - A ggplot object
+plot - A ggplot object
 }
 \description{
 Plots a plot displaying the observed regimen length distribution for a given regimen, or two given regimens

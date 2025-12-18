@@ -20,9 +20,9 @@ cdef inline double lossFunction(double T, double t1, double t2, str method, int 
 
     if method == "PropDiff":
         if t1 == 0.0 or t2 == 0.0:
-            tp = T * absDiff / (maxT + 1)
+            tp = T * absDiff / (maxT + 1) if absDiff < 100 else T * absDiff
         else:
-            tp = T * absDiff / maxT
+            tp = T * absDiff / maxT if absDiff < 100 else T * absDiff
     elif method == "AbsDiff":
         tp = T * absDiff
     elif method == "Quadratic":
@@ -148,7 +148,7 @@ cdef TSW_scoreMat(
                 TC[i][j] = TC[i - 1][j]
             # VERTICAL
             elif traceVal == 3:
-                TR[i][j] = TC[i][j - 1]
+                TR[i][j] = TR[i][j - 1]
                 TC[i][j] = TC[i][j - 1] + s1_time_j
 
             # Edge penalty
