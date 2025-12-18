@@ -2,18 +2,16 @@
 % Please edit documentation in R/plots.R
 \name{plotAlignment}
 \alias{plotAlignment}
-\title{Plots a full alignment output
-For each patient}
+\title{Plots a full alignment output}
 \usage{
 plotAlignment(pa, known_drugs = NULL)
 }
 \arguments{
-\item{pa}{A patient alignment dataframe created by align()}
+\item{pa}{A patient alignment dataframe created by processAlignments() or calculateEras}
 }
 \value{
-plot - A ggplot object
+plot - A list of ggplot objects
 }
 \description{
-Plots a full alignment output
-For each patient
+For each patient separately, plot drug exposures and aligned regimens over time
 }
