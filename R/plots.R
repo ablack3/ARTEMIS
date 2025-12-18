@@ -56,12 +56,12 @@ plotAlignment <- function(pa, known_drugs = NULL) {
       select(person_id = personID, seq = DrugRecord_full) %>% 
       distinct() %>% 
       separate_rows(seq, sep = ";") %>%
+      filter(seq != "") %>%
       separate(seq, into = c("time", 'component')) %>%
-      filter(time != "") %>%
       group_by(person_id) %>%
       mutate(
           t_start = cumsum(as.integer(time)),
-          t_end = t_start + 1,
+          t_end = t_start,
           case = "drugs",
           person_id = as.character(person_id)
       ) %>%
