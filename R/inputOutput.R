@@ -159,7 +159,9 @@ loadDrugs <- function(absolute = NULL) {
 #' @export
 loadRegimens <- function(condition = "all", absolute = NULL, 
                          mapping = list("lungCancer" = c("Thoraic Oncology", "Thoraic Oncology"),
-                                        "multipleMyeloma" = c("Multiple Myeloma"))) {
+                                        "multipleMyeloma" = c("Multiple Myeloma")),
+                        concept_file = NULL,
+                        ignore_default_list = FALSE) {
   
   # Load from absolute path if provided
   if (!is.null(absolute)) {
@@ -169,6 +171,10 @@ loadRegimens <- function(condition = "all", absolute = NULL,
     
     regimens_env <- new.env()
     load(absolute, envir = regimens_env)
+    assign("regimens_env", regimens_env, envir = .GlobalEnv)
+
+    cleanByBlacklist(concept_file,
+            ignore_default_list)
     
     # Ensure `regimens` exists after loading
     if (!exists("regimens", envir = regimens_env)) {
