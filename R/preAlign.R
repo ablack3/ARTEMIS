@@ -105,6 +105,7 @@ rowHasBlacklist <- function(frame, blacklist_set) {
 #' @param ignore_default_list When TRUE and a concept_file is provided, use only
 #'   the user-provided list. If no concept_file is provided, the default list is used.
 #' @return Invisible cleaned data frame.
+#' @export
 cleanByBlacklist <- function(concept_file = NULL,
                              ignore_default_list = FALSE) {
   if (!exists("regimens_env")) {
