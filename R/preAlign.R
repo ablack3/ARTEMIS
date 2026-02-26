@@ -13,6 +13,9 @@ default_concept_list <- c(
 #' @return Character vector of unique concept names.
 conceptToList <- function(concept_file = NULL, ignore_default_list = FALSE) {
   if (is.null(concept_file)) {
+    if (isTRUE(ignore_default_list)) {
+      warning("ignore_default_list = TRUE but no concept_file provided; using default_concept_list instead.")
+    }
     selection <- default_concept_list
   } else {
     user_list <- readLines(concept_file, warn = FALSE)
