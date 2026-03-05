@@ -13,30 +13,43 @@ env:
 
 jobs:
   build-and-push:
-    if: ${{ secrets.DOCKERHUB_USER != '' && secrets.DOCKERHUB_PAT != '' }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check Docker Hub credentials
+        id: dockerhub
+        run: |
+          if [ -n "${DOCKERHUB_USER}" ] && [ -n "${DOCKERHUB_PAT}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Validate Docker Hub configuration
+        if: ${{ steps.dockerhub.outputs.enabled == 'true' }}
         run: |
           test -n "${DOCKERHUB_REPO}" || (echo "Missing DOCKERHUB_REPO env/var" && exit 1)
 
       - name: Set up QEMU
+        if: ${{ steps.dockerhub.outputs.enabled == 'true' }}
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
+        if: ${{ steps.dockerhub.outputs.enabled == 'true' }}
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
+        if: ${{ steps.dockerhub.outputs.enabled == 'true' }}
         uses: docker/login-action@v3
         with:
           username: ${{ env.DOCKERHUB_USER }}
           password: ${{ env.DOCKERHUB_PAT }}
 
       - name: Docker metadata
+        if: ${{ steps.dockerhub.outputs.enabled == 'true' }}
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -50,6 +63,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
 
       - name: Build and push image
+        if: ${{ steps.dockerhub.outputs.enabled == 'true' }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -60,3 +74,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Skip build and push
+        if: ${{ steps.dockerhub.outputs.enabled != 'true' }}
+        run: echo "DOCKERHUB_USER/DOCKERHUB_PAT not set. Skipping Docker Hub build and push."
