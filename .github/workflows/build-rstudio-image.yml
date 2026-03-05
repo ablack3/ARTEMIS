@@ -12,15 +12,16 @@ env:
   DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO || 'artemis-rstudio' }}
 
 jobs:
-  build-and-push:
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.cfg.outputs.enabled }}
+      image: ${{ steps.cfg.outputs.image }}
+      tags: ${{ steps.cfg.outputs.tags }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Check Docker Hub credentials
-        id: dockerhub
+      - name: Resolve config
+        id: cfg
         run: |
           if [ -n "${DOCKERHUB_USER}" ] && [ -n "${DOCKERHUB_PAT}" ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
@@ -28,53 +29,113 @@ jobs:
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Validate Docker Hub configuration
-        if: ${{ steps.dockerhub.outputs.enabled == 'true' }}
-        run: |
-          test -n "${DOCKERHUB_REPO}" || (echo "Missing DOCKERHUB_REPO env/var" && exit 1)
+          IMAGE="${DOCKERHUB_USER}/${DOCKERHUB_REPO}"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
 
-      - name: Set up QEMU
-        if: ${{ steps.dockerhub.outputs.enabled == 'true' }}
-        uses: docker/setup-qemu-action@v3
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+          TAGS=("sha-${GITHUB_SHA}")
+          if [ "${GITHUB_REF_TYPE}" = "branch" ]; then
+            BRANCH_TAG="$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed 's#[^a-z0-9._-]#-#g; s/--*/-/g; s/^-//; s/-$//')"
+            if [ -n "${BRANCH_TAG}" ]; then
+              TAGS+=("${BRANCH_TAG}")
+            fi
+          fi
+          if [ "${GITHUB_REF_NAME}" = "${DEFAULT_BRANCH}" ]; then
+            TAGS+=("latest")
+          fi
+          printf "tags=%s\n" "$(printf '%s\n' "${TAGS[@]}" | paste -sd, -)" >> "$GITHUB_OUTPUT"
 
-      - name: Set up Docker Buildx
-        if: ${{ steps.dockerhub.outputs.enabled == 'true' }}
-        uses: docker/setup-buildx-action@v3
+      - name: Skip build and push
+        if: ${{ steps.cfg.outputs.enabled != 'true' }}
+        run: echo "DOCKERHUB_USER/DOCKERHUB_PAT not set. Skipping Docker Hub build and push."
+
+  build-amd64:
+    runs-on: ubuntu-latest
+    needs: prepare
+    if: ${{ needs.prepare.outputs.enabled == 'true' }}
+    env:
+      IMAGE: ${{ needs.prepare.outputs.image }}
+      TAGS: ${{ needs.prepare.outputs.tags }}
+      ARCH: amd64
+      TARGETPLATFORM: linux/amd64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Log in to Docker Hub
-        if: ${{ steps.dockerhub.outputs.enabled == 'true' }}
         uses: docker/login-action@v3
         with:
           username: ${{ env.DOCKERHUB_USER }}
           password: ${{ env.DOCKERHUB_PAT }}
 
-      - name: Docker metadata
-        if: ${{ steps.dockerhub.outputs.enabled == 'true' }}
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}
-          tags: |
-            type=sha,format=long
-            type=ref,event=branch
-            type=raw,value=latest,enable={{is_default_branch}}
-          labels: |
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+      - name: Build and push amd64 tags
+        run: |
+          IFS=',' read -ra TAG_ARRAY <<< "${TAGS}"
+          for TAG in "${TAG_ARRAY[@]}"; do
+            ARCH_TAG="${IMAGE}:${TAG}-${ARCH}"
+            docker build \
+              --file ./docker/Dockerfile \
+              --build-arg TARGETPLATFORM="${TARGETPLATFORM}" \
+              --tag "${ARCH_TAG}" \
+              .
+            docker push "${ARCH_TAG}"
+          done
 
-      - name: Build and push image
-        if: ${{ steps.dockerhub.outputs.enabled == 'true' }}
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./docker/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+  build-arm64:
+    runs-on: ubuntu-24.04-arm
+    needs: prepare
+    if: ${{ needs.prepare.outputs.enabled == 'true' }}
+    env:
+      IMAGE: ${{ needs.prepare.outputs.image }}
+      TAGS: ${{ needs.prepare.outputs.tags }}
+      ARCH: arm64
+      TARGETPLATFORM: linux/arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Skip build and push
-        if: ${{ steps.dockerhub.outputs.enabled != 'true' }}
-        run: echo "DOCKERHUB_USER/DOCKERHUB_PAT not set. Skipping Docker Hub build and push."
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USER }}
+          password: ${{ env.DOCKERHUB_PAT }}
+
+      - name: Build and push arm64 tags
+        run: |
+          IFS=',' read -ra TAG_ARRAY <<< "${TAGS}"
+          for TAG in "${TAG_ARRAY[@]}"; do
+            ARCH_TAG="${IMAGE}:${TAG}-${ARCH}"
+            docker build \
+              --file ./docker/Dockerfile \
+              --build-arg TARGETPLATFORM="${TARGETPLATFORM}" \
+              --tag "${ARCH_TAG}" \
+              .
+            docker push "${ARCH_TAG}"
+          done
+
+  publish-manifest:
+    runs-on: ubuntu-latest
+    needs: [prepare, build-amd64, build-arm64]
+    if: ${{ needs.prepare.outputs.enabled == 'true' }}
+    env:
+      IMAGE: ${{ needs.prepare.outputs.image }}
+      TAGS: ${{ needs.prepare.outputs.tags }}
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USER }}
+          password: ${{ env.DOCKERHUB_PAT }}
+
+      - name: Create and push multi-arch manifest
+        run: |
+          IFS=',' read -ra TAG_ARRAY <<< "${TAGS}"
+          for TAG in "${TAG_ARRAY[@]}"; do
+            BASE_TAG="${IMAGE}:${TAG}"
+            docker manifest create "${BASE_TAG}" \
+              "${BASE_TAG}-amd64" \
+              "${BASE_TAG}-arm64"
+            docker manifest annotate "${BASE_TAG}" "${BASE_TAG}-amd64" --os linux --arch amd64
+            docker manifest annotate "${BASE_TAG}" "${BASE_TAG}-arm64" --os linux --arch arm64
+            docker manifest push "${BASE_TAG}"
+          done
