@@ -325,6 +325,34 @@ generateCohortStats <- function(connectionDetails,
                                 con_df,
                                 stringDF) {
     connection <- DatabaseConnector::connect(connectionDetails = connectionDetails)
+    on.exit(DatabaseConnector::disconnect(connection), add = TRUE)
+
+    safe_quantile <- function(x) {
+        x <- as.numeric(x)
+        x <- x[!is.na(x)]
+        if (length(x) == 0) {
+            return(c(`25%` = NA_real_, `50%` = NA_real_, `75%` = NA_real_))
+        }
+        return(stats::quantile(x, probs = c(0.25, 0.5, 0.75), na.rm = TRUE))
+    }
+
+    build_atc_freq <- function(values, gender_label) {
+        out <- as.data.frame(table(values), stringsAsFactors = FALSE)
+        if (nrow(out) == 0) {
+            return(data.frame(
+                variable = character(0),
+                value = numeric(0),
+                Category = character(0),
+                Gender = character(0),
+                stringsAsFactors = FALSE
+            ))
+        }
+        colnames(out)[c(1, 2)] <- c("variable", "value")
+        out$value <- out$value / sum(out$value)
+        out$Category <- rep("Untreated", nrow(out))
+        out$Gender <- rep(gender_label, nrow(out))
+        return(out)
+    }
     
     subjects <- unique(con_df$person_id)
     
@@ -350,17 +378,17 @@ generateCohortStats <- function(connectionDetails,
         dplyr::filter(.data$person_id %in% subjects_filtered) %>%
         dplyr::select(.data$person_id, .data$age, .data$gender)
     
-    uQuants_m <- quantile(unTreated[unTreated$gender == "M", ]$age)[c(2, 3, 4)]
-    uQuants_f <- quantile(unTreated[unTreated$gender == "F", ]$age)[c(2, 3, 4)]
-    uQuants_t <- quantile(unTreated$age)[c(2, 3, 4)]
+    uQuants_m <- safe_quantile(unTreated[unTreated$gender == "M", ]$age)
+    uQuants_f <- safe_quantile(unTreated[unTreated$gender == "F", ]$age)
+    uQuants_t <- safe_quantile(unTreated$age)
     
     treated <- con_patientTable %>%
         dplyr::filter(.data$person_id %in% subjects_unfiltered) %>%
         dplyr::select(.data$person_id, .data$age, .data$gender)
     
-    tQuants_m <- quantile(treated[treated$gender == "M", ]$age)[c(2, 3, 4)]
-    tQuants_f <- quantile(treated[treated$gender == "F", ]$age)[c(2, 3, 4)]
-    tQuants_t <- quantile(treated$age)[c(2, 3, 4)]
+    tQuants_m <- safe_quantile(treated[treated$gender == "M", ]$age)
+    tQuants_f <- safe_quantile(treated[treated$gender == "F", ]$age)
+    tQuants_t <- safe_quantile(treated$age)
     
     quantiles <- as.data.frame(rbind(uQuants_t, rbind(tQuants_t, rbind(
         tQuants_m, rbind(tQuants_f, rbind(uQuants_m, uQuants_f))
@@ -422,39 +450,39 @@ generateCohortStats <- function(connectionDetails,
     con_df_f <- con_df_temp %>%
         dplyr::filter(.data$person_id %in% unTreated[unTreated$gender == "F", ]$person_id)
     
-    m_df <- as.data.frame(table(con_df_m$concept_name) / sum(table(con_df_m$concept_name)))
-    f_df <- as.data.frame(table(con_df_f$concept_name) / sum(table(con_df_f$concept_name)))
-    t_df <- as.data.frame(table(con_df_temp$concept_name) / sum(table(con_df_temp$concept_name)))
+    m_df <- build_atc_freq(con_df_m$concept_name, "M")
+    f_df <- build_atc_freq(con_df_f$concept_name, "F")
+    t_df <- build_atc_freq(con_df_temp$concept_name, "Total")
     
-    m_df$Category <- "Untreated"
-    m_df$Gender <- "M"
-    f_df$Category <- "Untreated"
-    f_df$Gender <- "F"
-    t_df$Category <- "Untreated"
-    t_df$Gender <- "Total"
-    
-    colnames(m_df)[c(1, 2)] <- c("variable", "value")
-    colnames(f_df)[c(1, 2)] <- c("variable", "value")
-    colnames(t_df)[c(1, 2)] <- c("variable", "value")
-    
-    atc_output <- as.data.frame(reshape2::acast(rbind(t_df, rbind(m_df, f_df)), variable ~
-                                                    Gender + Category, value.var = "value"))
-    atc_output$M_Treated <- ""
-    atc_output$F_Treated <- ""
-    atc_output$Total_Treated <- ""
-    atc_output <- atc_output[, c(5, 1, 4, 2, 6, 3)]
+    atc_input <- rbind(t_df, rbind(m_df, f_df))
+    if (nrow(atc_input) == 0) {
+        atc_output <- output_df[0, , drop = FALSE]
+    } else {
+        atc_output <- as.data.frame(reshape2::acast(
+            atc_input,
+            variable ~ Gender + Category,
+            value.var = "value"
+        ))
+        atc_output$M_Treated <- ""
+        atc_output$F_Treated <- ""
+        atc_output$Total_Treated <- ""
+        atc_output <- atc_output[, c(5, 1, 4, 2, 6, 3), drop = FALSE]
+    }
     
     output <- rbind(output_df, atc_output)
     
-    output[c(5:18), ]$F_Untreated <- as.character(format(round(
-        100 * as.numeric(output[c(5:18), ]$F_Untreated), 2
-    ), nsmall = 2))
-    output[c(5:18), ]$M_Untreated <- as.character(format(round(
-        100 * as.numeric(output[c(5:18), ]$M_Untreated), 2
-    ), nsmall = 2))
-    output[c(5:18), ]$Total_Untreated <- as.character(format(round(
-        100 * as.numeric(output[c(5:18), ]$Total_Untreated), 2
-    ), nsmall = 2))
+    pct_rows <- intersect(5:18, seq_len(nrow(output)))
+    if (length(pct_rows) > 0) {
+        output[pct_rows, ]$F_Untreated <- as.character(format(round(
+            100 * as.numeric(output[pct_rows, ]$F_Untreated), 2
+        ), nsmall = 2))
+        output[pct_rows, ]$M_Untreated <- as.character(format(round(
+            100 * as.numeric(output[pct_rows, ]$M_Untreated), 2
+        ), nsmall = 2))
+        output[pct_rows, ]$Total_Untreated <- as.character(format(round(
+            100 * as.numeric(output[pct_rows, ]$Total_Untreated), 2
+        ), nsmall = 2))
+    }
     
     return(output)
     
