@@ -8,8 +8,12 @@ This folder contains the Docker setup for the ARTEMIS RStudio image.
 
 ## GitHub Actions publish to Docker Hub
 
-Workflow: `.github/workflows/build-rstudio-image.yml`  
-Trigger: manual (`workflow_dispatch`)
+Workflows:
+
+- `.github/workflows/build-rstudio-image-amd64.yml`
+- `.github/workflows/build-rstudio-image-arm64.yml`
+
+Trigger: manual (`workflow_dispatch`) on each workflow.
 
 Set these repository secrets:
 
@@ -20,23 +24,25 @@ Optional repository variable:
 
 - `DOCKERHUB_REPO`: target Docker Hub repo name (default: `artemis-rstudio`)
 
-The workflow builds and pushes a multi-arch manifest for:
+Each workflow builds and pushes architecture-specific tags using plain `docker build`:
 
-- `linux/amd64`
-- `linux/arm64`
+- `*-amd64` from the amd64 workflow
+- `*-arm64` from the arm64 workflow
 
 ## Pull the built image
 
 Replace values as needed:
 
 ```bash
-docker pull <DOCKERHUB_USER>/<DOCKERHUB_REPO>:latest
+docker pull <DOCKERHUB_USER>/<DOCKERHUB_REPO>:latest-amd64
+# or
+docker pull <DOCKERHUB_USER>/<DOCKERHUB_REPO>:latest-arm64
 ```
 
 Example:
 
 ```bash
-docker pull myuser/artemis-rstudio:latest
+docker pull myuser/artemis-rstudio:latest-amd64
 ```
 
 ## Run locally
@@ -44,7 +50,7 @@ docker pull myuser/artemis-rstudio:latest
 Open RStudio at [http://127.0.0.1:8787](http://127.0.0.1:8787)
 
 ```bash
-docker run --rm -p 8787:8787 myuser/artemis-rstudio:latest
+docker run --rm -p 8787:8787 myuser/artemis-rstudio:latest-amd64
 ```
 
 Credentials:
@@ -65,32 +71,25 @@ Build for current architecture:
 docker build -f docker/Dockerfile -t artemis-rstudio:local .
 ```
 
-Build specific architecture:
-
-```bash
-docker buildx build --platform linux/amd64 -f docker/Dockerfile -t artemis-rstudio:amd64 .
-docker buildx build --platform linux/arm64 -f docker/Dockerfile -t artemis-rstudio:arm64 .
-```
-
 ## Offline transfer via USB (tarball workflow)
 
 1. Save image to tarball on online machine:
 
 ```bash
-docker save -o /path/to/usb/artemis-rstudio-latest.tar myuser/artemis-rstudio:latest
+docker save -o /path/to/usb/artemis-rstudio-latest-amd64.tar myuser/artemis-rstudio:latest-amd64
 ```
 
 2. Move USB to offline machine with Docker installed.
 3. Load image on offline machine:
 
 ```bash
-docker load -i /path/to/usb/artemis-rstudio-latest.tar
+docker load -i /path/to/usb/artemis-rstudio-latest-amd64.tar
 ```
 
 4. Run on offline machine:
 
 ```bash
-docker run --rm -p 8787:8787 myuser/artemis-rstudio:latest
+docker run --rm -p 8787:8787 myuser/artemis-rstudio:latest-amd64
 ```
 
 Login credentials remain:

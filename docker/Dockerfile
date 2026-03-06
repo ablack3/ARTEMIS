@@ -1,5 +1,4 @@
-ARG TARGETPLATFORM
-FROM --platform=$TARGETPLATFORM rocker/rstudio:4.4.3
+FROM rocker/rstudio:4.4.3
 
 LABEL org.opencontainers.image.title="ARTEMIS RStudio"
 LABEL org.opencontainers.image.description="ARTEMIS development image with RStudio Server, Java, Python 3.12, and JDBC drivers."
@@ -88,7 +87,7 @@ RUN printf '%s\n' \
     "session-default-working-dir=${ARTEMIS_HOME}" \
     >> /etc/rstudio/rsession.conf
 
-RUN install2.r --error CirceR CohortGenerator RSQLite duckdb \
+RUN install2.r --error CirceR CohortGenerator RSQLite \
   && rm -rf /tmp/download_packages/ /tmp/*.rds
 
 WORKDIR ${ARTEMIS_HOME}
