@@ -110,6 +110,43 @@ local environment for use when running python via R through reticulate.
 
 A user script is included in this repository,`userScript.R`, to demonstrate how ARTEMIS works. It uses a dummy database to create patients and align them with treatment regimens.
 
+### Mock DuckDB CDM for demos and tests
+
+ARTEMIS now includes a prebuilt DuckDB CDM at:
+
+`inst/extdata/mockArtemisCdm.duckdb`
+
+Use the helper APIs to connect:
+
+```r
+dbPath <- loadMockArtemisCdm()
+connectionDetails <- createMockArtemisConnectionDetails()
+cdmSchema <- "main"
+writeSchema <- "main"
+```
+
+A demo script is provided at:
+
+`extras/codeToRun_mockArtemisCdm.R`
+
+Run fast mode (default, sampled):
+
+```bash
+Rscript extras/codeToRun_mockArtemisCdm.R
+```
+
+Run full mode (all mock patients):
+
+```bash
+Rscript extras/codeToRun_mockArtemisCdm.R full
+```
+
+To rebuild the mock database deterministically:
+
+```bash
+Rscript data-raw/build_mock_artemis_cdm.R
+```
+
 ### DatabaseConnector
 
 ARTEMIS also relies on the package

@@ -41,6 +41,8 @@ Suggests:
     testthat (>= 3.0.0),
     DBI,
     duckdb,
+    jsonlite,
+    RSQLite,
     knitr,
     rmarkdown
 Config/testthat/edition: 3
