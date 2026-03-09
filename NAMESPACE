@@ -3,6 +3,7 @@
 export("%>%")
 export("%m+%")
 export(calculateEras)
+export(cleanByBlacklist)
 export(combineOverlaps)
 export(createDrugDF)
 export(decode)

@@ -108,7 +108,8 @@ local environment for use when running python via R through reticulate.
 
 ## Usage - User Script
 
-A user script is included in this repository,`userScript.R`, to demonstrate how ARTEMIS works. It uses a dummy database to create patients and align them with treatment regimens.
+A user script is included in this repository,`userScript.R`, to demonstrate how ARTEMIS works. It uses a dummy database to create patients and align them with treatment regimens. During regimen selection, predefined concept filtering (e.g., antibiotics, steroids) is applied by default. The user can override these defaults by setting ignore_default_list, but must provide the concept file path as an argument. The concept file should contain one concept ID per line. Once loaded, the full list of available concepts can be found in regimens$concepts.
+
 
 ### DatabaseConnector
 
