@@ -47,6 +47,23 @@ Then checks their return values match using:
 
     isTRUE(all.equal(r_cy, r_py, tolerance = 1e-8))
 
+### R↔Python Boundary
+**Scope (Exploration → Decisions)**  
+1. Canonical interface (R side)    
+A single exported R function is the only supported entrypoint for calling Python.
+All R code must go through this function instead of calling reticulate directly.
+
+2. Mocking strategy  
+The Python call can be replaced with a pure R mock so unit tests do not depend
+on reticulate or a Python runtime.
+Python and Cython are treated as interchangeable real implementations and are
+exercised only in integration tests.
+
+3. Serialization boundary  
+The interaction is treated as a strict serialization boundary: no Python objects
+cross into R, and all inputs and outputs are fully materialized R data structures.
+
+
 ### Expected Output
 
     devtools::test(pkg="/path/to/ARTEMIS")
